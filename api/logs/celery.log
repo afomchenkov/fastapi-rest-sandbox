@@ -1,0 +1,16 @@
+[2024-06-01 09:23:12,403: INFO/MainProcess] Connected to redis://redis:6379/0
+[2024-06-01 09:23:12,412: INFO/MainProcess] mingle: searching for neighbors
+[2024-06-01 09:23:13,429: INFO/MainProcess] mingle: all alone
+[2024-06-01 09:23:13,456: INFO/MainProcess] celery@b4706b8e8063 ready.
+[2024-06-01 09:24:40,136: INFO/MainProcess] Connected to redis://redis:6379/0
+[2024-06-01 09:24:40,153: INFO/MainProcess] mingle: searching for neighbors
+[2024-06-01 09:24:41,173: INFO/MainProcess] mingle: all alone
+[2024-06-01 09:24:41,196: INFO/MainProcess] celery@9516fe89553e ready.
+[2024-06-01 09:27:01,932: INFO/MainProcess] Task tasks.task_add_user[0d4f9660-9879-4491-8c1c-c4734dbedcbc] received
+[2024-06-01 09:27:12,430: INFO/ForkPoolWorker-7] Task tasks.task_add_user[0d4f9660-9879-4491-8c1c-c4734dbedcbc] succeeded in 10.495392845999959s: {'success': [{'first_name': 'Amanda', 'last_name': 'Haapala', 'mail': 'amanda.haapala@example.com', 'age': 37, 'address': 'Finland, Soini, 22539, Reijolankatu 1469'}]}
+[2024-06-01 09:27:13,420: INFO/MainProcess] Task tasks.task_add_user[cafd182b-dc50-48aa-9134-f29363a648d9] received
+[2024-06-01 09:27:15,312: INFO/MainProcess] Task tasks.task_add_user[edc9ca0b-f814-4b71-9850-de078e632575] received
+[2024-06-01 09:27:23,857: INFO/ForkPoolWorker-7] Task tasks.task_add_user[cafd182b-dc50-48aa-9134-f29363a648d9] succeeded in 10.43363467600011s: {'success': [{'first_name': 'علی', 'last_name': 'علیزاده', 'mail': 'aaly.aalyzdh@example.com', 'age': 30, 'address': 'Iran, اراک, 21817, شهید آقاسرمدیان 882'}]}
+[2024-06-01 09:27:25,003: INFO/MainProcess] Task tasks.task_add_user[8b4abcb1-4c7e-4026-8a9c-96609db52e50] received
+[2024-06-01 09:27:25,821: INFO/ForkPoolWorker-8] Task tasks.task_add_user[edc9ca0b-f814-4b71-9850-de078e632575] succeeded in 10.501130649000515s: {'success': [{'first_name': 'Mitesh', 'last_name': 'Fernandes', 'mail': 'mitesh.fernandes@example.com', 'age': 34, 'address': 'India, Kharagpur, 61149, Chimanlal Girdharlal Rd 2514'}]}
+[2024-06-01 09:27:35,402: INFO/ForkPoolWorker-7] Task tasks.task_add_user[8b4abcb1-4c7e-4026-8a9c-96609db52e50] succeeded in 10.3971837149993s: {'success': [{'first_name': 'Oğuzhan', 'last_name': 'Çetiner', 'mail': 'oguzhan.cetiner@example.com', 'age': 66, 'address': 'Turkey, Ardahan, 32041, Vatan Cd 9799'}, {'first_name': 'Lydia', 'last_name': 'Holt', 'mail': 'lydia.holt@example.com', 'age': 35, 'address': 'Australia, Dubbo, 4369, Elgin St 2857'}, {'first_name': 'فاطمه', 'last_name': 'سالاری', 'mail': 'ftmh.slry@example.com', 'age': 56, 'address': 'Iran, تهران, 96404, ولیعصر / مصدق 1078'}, {'first_name': 'Tarak', 'last_name': 'Sullad', 'mail': 'tarak.sullad@example.com', 'age': 59, 'address': 'India, Munger, 74846, Racecource Rd 3032'}, {'first_name': 'Fabien', 'last_name': 'Brun', 'mail': 'fabien.brun@example.com', 'age': 66, 'address': 'France, Limoges, 85056, Rue de Cuire 1183'}, {'first_name': 'Ramya', 'last_name': 'Gugale', 'mail': 'ramya.gugale@example.com', 'age': 61, 'address': 'India, Panchkula, 86565, College St 5096'}, {'first_name': 'Sharon', 'last_name': 'Howell', 'mail': 'sharon.howell@example.com', 'age': 55, 'address': 'United...'}, , ...}]}

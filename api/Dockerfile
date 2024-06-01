@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11
 
 WORKDIR /usr/src/app
 
@@ -8,4 +8,6 @@ ENV PYTHONUNBUFFERED 1
 COPY . .
 
 RUN pip install --upgrade pip
+RUN python -m ensurepip --upgrade
+RUN python -m pip install --upgrade setuptools
 RUN pip install --upgrade -r requirements.txt
