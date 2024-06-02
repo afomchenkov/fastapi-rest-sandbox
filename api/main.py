@@ -1,21 +1,62 @@
 from celery.result import AsyncResult
 from crud import crud_error_message, crud_get_user, crud_get_weather
 from database import engine
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from models import Base
 from tasks import task_add_user, task_add_weather
+import httpx
+import logging
+import cache
 
+# import os
+# from dotenv import load_dotenv
+# load_dotenv()
+# CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
+
+logging.basicConfig(format='%(asctime)s - %(message)s',
+                    datefmt='%d-%b-%y %H:%M:%S', level='DEBUG')
+log = logging.getLogger(__name__)
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title='FastAPI Redis Celery Sandbox')
+
+
+@app.on_event('startup')
+async def startup_event():
+    log.debug('Server started: http://0.0.0.0:8000')
+    keys = cache.Keys()
+    await cache.initialize_redis(keys)
 
 
 @app.get("/")
-def healthcheck():
+async def healthcheck():
     """
     Healthcheck
     """
+    log.debug('Healthcheck called')
     return {"running": True}
+
+
+@app.post('/refresh')
+async def refresh(background_tasks: BackgroundTasks, keys: cache.Keys = Depends(cache.make_keys)):
+    async with httpx.AsyncClient() as client:
+        data = await client.get(cache.SENTIMENT_API_URL)
+
+    log.debug(data.json())
+    await cache.persist(keys, data.json())
+    data = cache.calculate_three_hours_of_data(keys)
+    background_tasks.add_task(cache.set_cache, data, keys)
+
+
+@app.get('/is-bitcoin-lit')
+async def bitcoin(background_tasks: BackgroundTasks, keys: cache.Keys = Depends(cache.make_keys)):
+    data = cache.get_cache(keys)
+
+    if not data:
+        data = cache.calculate_three_hours_of_data(keys)
+        background_tasks.add_task(cache.set_cache, data, keys)
+
+    return data
 
 
 @app.post("/users/{count}/{delay}", status_code=201)

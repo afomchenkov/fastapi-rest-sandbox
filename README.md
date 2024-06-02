@@ -15,3 +15,9 @@ docker-compose up --build
 .> concurrency: 8 (prefork)
 .> task events: OFF (enable -E to monitor tasks in this worker)
 ```
+
+## Links:
+asyncio Redis: https://pypi.org/project/asyncio-redis/
+redis-py Redis: https://github.com/redis/redis-py
+redis-py docs: https://redis-py.readthedocs.io/en/stable/index.html
+Redis commands: https://redis.io/docs/latest/commands/ts.create/
