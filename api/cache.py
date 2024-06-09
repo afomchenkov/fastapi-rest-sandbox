@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 import functools
 import json
 import logging
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from tokenize import Double
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -20,8 +22,24 @@ DEFAULT_KEY_PREFIX = 'cache-key-prefix'
 SENTIMENT_API_URL = 'https://api.senticrypt.com/v1/bitcoin.json'
 TWO_MINUTES = 60 + 60
 HOURLY_BUCKET = '3600000'
+DAILY_BUCKET = '86400000'
+YEAR_HALF_HOURS = 14016
 
-Sentiments = List[Dict[str, Union[str, float]]]
+
+@dataclass
+class SeriesItem:
+    last: float
+    rate: float
+    mean: float
+    median: float
+    sum: float
+    count: float
+    timestamp: float
+    btc_price: str
+
+
+# Sentiments = List[Dict[str, Union[str, float]]]
+Sentiments = List[SeriesItem]
 
 
 class Config(BaseSettings):
@@ -76,35 +94,56 @@ async def add_many_to_timeseries(
     `key_pairs` is an iteratble of tuples containing in the 0th position the
     timestamp key into which to insert entries and the 1th position the name
     of the key within th `data` dict to find the sample.
+
+    example:
+        ('cache-key-prefix:sentiment:mean:30s', 'mean')
+        ('cache-key-prefix:price:mean:30s', 'btc_price')
+        ---
+        {'mean': 0.23, 'btc_price': '29089.35'}
     """
-    partial = functools.partial(redis.execute_command, 'TS.MADD')
+    data_points = []
     for datapoint in data:
         for timeseries_key, sample_key in key_pairs:
-            partial = functools.partial(
-                partial, timeseries_key, int(
-                    float(datapoint['timestamp']) * 1000,
-                ),
+            data_points.append((
+                timeseries_key,
+                int(float(datapoint['timestamp']) * 1000),
                 datapoint[sample_key],
-            )
-    return await partial()
+            ))
+    madd_args = []
+    for dp in data_points:
+        madd_args.extend(dp)
+    redis.execute_command('TS.MADD', *madd_args)
 
 
 async def persist(keys: Keys, data: Sentiments):
     ts_sentiment_key = keys.timeseries_sentiment_key()
     ts_price_key = keys.timeseries_price_key()
+    """
+    ('cache-key-prefix:price:mean:30s', 'btc_price')
+    ('cache-key-prefix:sentiment:mean:30s', 'mean')
+    """
     await add_many_to_timeseries(
         (
             (ts_price_key, 'btc_price'),
             (ts_sentiment_key, 'mean'),
-        ), data,
+        ),
+        data,
     )
 
 
 def get_hourly_average(ts_key: str, top_of_the_hour: int):
     response = redis.execute_command(
-        'TS.RANGE', ts_key, top_of_the_hour, '+',
-        'AGGREGATION', 'avg', HOURLY_BUCKET,
+        'TS.RANGE',
+        ts_key,
+        top_of_the_hour,
+        '+',
+        'AGGREGATION',
+        'avg',
+        DAILY_BUCKET,  # HOURLY_BUCKET,
     )
+    # start_ts = 1627812000000  # Start timestamp
+    # end_ts = 1627812300000    # End timestamp
+    # response = redis.execute_command('TS.RANGE', ts_key, start_ts, end_ts)
     # Returns a list of the structure [timestamp, average].
     return response
 
@@ -121,7 +160,6 @@ def datetime_parser(dct):
 
 def get_cache(keys: Keys):
     current_hour_cache_key = keys.cache_key()
-    print(current_hour_cache_key)
     current_hour_stats = redis.get(current_hour_cache_key)
 
     if current_hour_stats:
@@ -137,9 +175,13 @@ def set_cache(data, keys: Keys):
         json.dumps(data, default=serialize_dates),
         ex=TWO_MINUTES,
     )
+    pass
 
 
 def get_direction(last_three_hours, key: str):
+    if len(last_three_hours) == 0:
+        return 'flat'
+
     if last_three_hours[0][key] < last_three_hours[-1][key]:
         return 'rising'
     elif last_three_hours[0][key] > last_three_hours[-1][key]:
@@ -158,21 +200,18 @@ def now():
 def calculate_three_hours_of_data(keys: Keys) -> Dict[str, str]:
     sentiment_key = keys.timeseries_sentiment_key()
     price_key = keys.timeseries_price_key()
-    three_hours_ago_ms = int((now() - timedelta(hours=3)).timestamp() * 1000)
+    three_hours_ago_ms = int(
+        (now() - timedelta(hours=YEAR_HALF_HOURS)).timestamp() * 1000)
+    # int((now() - timedelta(hours=3)).timestamp() * 1000)
 
     sentiment = get_hourly_average(sentiment_key, three_hours_ago_ms)
     price = get_hourly_average(price_key, three_hours_ago_ms)
 
     last_three_hours = [{
-        'price': data[0][1], 'sentiment': data[1][1],
+        'price': float(data[0][1]),
+        'sentiment': float(data[1][1]),
         'time': datetime.fromtimestamp(data[0][0] / 1000, tz=timezone.utc),
-    }
-        for data in zip(price, sentiment)]
-
-    log.debug(sentiment_key)
-    log.debug(price_key)
-    log.debug(sentiment)
-    log.debug(price)
+    } for data in zip(price, sentiment)]
 
     return {
         'hourly_average_of_averages': last_three_hours,
@@ -194,13 +233,15 @@ async def make_timeseries(key: str):
     """
     try:
         redis.execute_command(
-            'TS.CREATE', key,
-            'DUPLICATE_POLICY', 'first',
+            'TS.CREATE',
+            key,
+            'DUPLICATE_POLICY',
+            'first',
         )
     except RedisError as e:
         log.debug('Could not create timeseries %s, error: %s', key, e)
 
 
 async def initialize_redis(keys: Keys):
-    make_timeseries(keys.timeseries_sentiment_key())
-    make_timeseries(keys.timeseries_price_key())
+    await make_timeseries(keys.timeseries_sentiment_key())
+    await make_timeseries(keys.timeseries_price_key())

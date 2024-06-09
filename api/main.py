@@ -42,10 +42,11 @@ async def refresh(background_tasks: BackgroundTasks, keys: cache.Keys = Depends(
     async with httpx.AsyncClient() as client:
         data = await client.get(cache.SENTIMENT_API_URL)
 
-    log.debug(data.json())
     await cache.persist(keys, data.json())
     data = cache.calculate_three_hours_of_data(keys)
     background_tasks.add_task(cache.set_cache, data, keys)
+
+    return data
 
 
 @app.get('/is-bitcoin-lit')
