@@ -18,11 +18,11 @@ from redis import RedisError, from_url
 from pydantic import BaseSettings
 
 
-DEFAULT_KEY_PREFIX = 'cache-key-prefix'
-SENTIMENT_API_URL = 'https://api.senticrypt.com/v1/bitcoin.json'
+DEFAULT_KEY_PREFIX = "cache-key-prefix"
+SENTIMENT_API_URL = "https://api.senticrypt.com/v1/bitcoin.json"
 TWO_MINUTES = 60 + 60
-HOURLY_BUCKET = '3600000'
-DAILY_BUCKET = '86400000'
+HOURLY_BUCKET = "3600000"
+DAILY_BUCKET = "86400000"
 YEAR_HALF_HOURS = 14016
 
 
@@ -43,11 +43,12 @@ Sentiments = List[SeriesItem]
 
 
 class Config(BaseSettings):
-    redis_url: str = 'redis://redis:6379/0'
+    redis_url: str = "redis://redis:6379/0"
 
 
-logging.basicConfig(format='%(asctime)s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S', level='DEBUG')
+logging.basicConfig(
+    format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S", level="DEBUG"
+)
 log = logging.getLogger(__name__)
 config = Config()
 redis = from_url(config.redis_url)
@@ -66,18 +67,18 @@ class Keys:
         """
         A time series containing 30-second snapshots of BTC sentiment.
         """
-        return f'sentiment:mean:30s'
+        return f"sentiment:mean:30s"
 
     @prefixed_key
     def timeseries_price_key(self) -> str:
         """
         A time series containing 30-second snapshots of BTC price.
         """
-        return f'price:mean:30s'
+        return f"price:mean:30s"
 
     @prefixed_key
     def cache_key(self) -> str:
-        return f'cache'
+        return f"cache"
 
 
 def make_keys():
@@ -85,8 +86,7 @@ def make_keys():
 
 
 async def add_many_to_timeseries(
-    key_pairs: Iterable[Tuple[str, str]],
-    data: Sentiments
+    key_pairs: Iterable[Tuple[str, str]], data: Sentiments
 ):
     """
     Add many samples to a single timeseries key.
@@ -104,15 +104,17 @@ async def add_many_to_timeseries(
     data_points = []
     for datapoint in data:
         for timeseries_key, sample_key in key_pairs:
-            data_points.append((
-                timeseries_key,
-                int(float(datapoint['timestamp']) * 1000),
-                datapoint[sample_key],
-            ))
+            data_points.append(
+                (
+                    timeseries_key,
+                    int(float(datapoint["timestamp"]) * 1000),
+                    datapoint[sample_key],
+                )
+            )
     madd_args = []
     for dp in data_points:
         madd_args.extend(dp)
-    redis.execute_command('TS.MADD', *madd_args)
+    redis.execute_command("TS.MADD", *madd_args)
 
 
 async def persist(keys: Keys, data: Sentiments):
@@ -124,8 +126,8 @@ async def persist(keys: Keys, data: Sentiments):
     """
     await add_many_to_timeseries(
         (
-            (ts_price_key, 'btc_price'),
-            (ts_sentiment_key, 'mean'),
+            (ts_price_key, "btc_price"),
+            (ts_sentiment_key, "mean"),
         ),
         data,
     )
@@ -133,12 +135,12 @@ async def persist(keys: Keys, data: Sentiments):
 
 def get_hourly_average(ts_key: str, top_of_the_hour: int):
     response = redis.execute_command(
-        'TS.RANGE',
+        "TS.RANGE",
         ts_key,
         top_of_the_hour,
-        '+',
-        'AGGREGATION',
-        'avg',
+        "+",
+        "AGGREGATION",
+        "avg",
         DAILY_BUCKET,  # HOURLY_BUCKET,
     )
     # start_ts = 1627812000000  # Start timestamp
@@ -150,7 +152,7 @@ def get_hourly_average(ts_key: str, top_of_the_hour: int):
 
 def datetime_parser(dct):
     for k, v in dct.items():
-        if isinstance(v, str) and v.endswith('+00:00'):
+        if isinstance(v, str) and v.endswith("+00:00"):
             try:
                 dct[k] = datetime.datetime.fromisoformat(v)
             except:
@@ -180,14 +182,14 @@ def set_cache(data, keys: Keys):
 
 def get_direction(last_three_hours, key: str):
     if len(last_three_hours) == 0:
-        return 'flat'
+        return "flat"
 
     if last_three_hours[0][key] < last_three_hours[-1][key]:
-        return 'rising'
+        return "rising"
     elif last_three_hours[0][key] > last_three_hours[-1][key]:
-        return 'falling'
+        return "falling"
     else:
-        return 'flat'
+        return "flat"
 
 
 def now():
@@ -201,22 +203,26 @@ def calculate_three_hours_of_data(keys: Keys) -> Dict[str, str]:
     sentiment_key = keys.timeseries_sentiment_key()
     price_key = keys.timeseries_price_key()
     three_hours_ago_ms = int(
-        (now() - timedelta(hours=YEAR_HALF_HOURS)).timestamp() * 1000)
+        (now() - timedelta(hours=YEAR_HALF_HOURS)).timestamp() * 1000
+    )
     # int((now() - timedelta(hours=3)).timestamp() * 1000)
 
     sentiment = get_hourly_average(sentiment_key, three_hours_ago_ms)
     price = get_hourly_average(price_key, three_hours_ago_ms)
 
-    last_three_hours = [{
-        'price': float(data[0][1]),
-        'sentiment': float(data[1][1]),
-        'time': datetime.fromtimestamp(data[0][0] / 1000, tz=timezone.utc),
-    } for data in zip(price, sentiment)]
+    last_three_hours = [
+        {
+            "price": float(data[0][1]),
+            "sentiment": float(data[1][1]),
+            "time": datetime.fromtimestamp(data[0][0] / 1000, tz=timezone.utc),
+        }
+        for data in zip(price, sentiment)
+    ]
 
     return {
-        'hourly_average_of_averages': last_three_hours,
-        'sentiment_direction': get_direction(last_three_hours, 'sentiment'),
-        'price_direction': get_direction(last_three_hours, 'price'),
+        "hourly_average_of_averages": last_three_hours,
+        "sentiment_direction": get_direction(last_three_hours, "sentiment"),
+        "price_direction": get_direction(last_three_hours, "price"),
     }
 
 
@@ -233,13 +239,13 @@ async def make_timeseries(key: str):
     """
     try:
         redis.execute_command(
-            'TS.CREATE',
+            "TS.CREATE",
             key,
-            'DUPLICATE_POLICY',
-            'first',
+            "DUPLICATE_POLICY",
+            "first",
         )
     except RedisError as e:
-        log.debug('Could not create timeseries %s, error: %s', key, e)
+        log.debug("Could not create timeseries %s, error: %s", key, e)
 
 
 async def initialize_redis(keys: Keys):

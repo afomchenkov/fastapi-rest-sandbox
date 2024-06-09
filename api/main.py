@@ -13,17 +13,18 @@ import cache
 # load_dotenv()
 # CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 
-logging.basicConfig(format='%(asctime)s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S', level='DEBUG')
+logging.basicConfig(
+    format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S", level="DEBUG"
+)
 log = logging.getLogger(__name__)
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title='FastAPI Redis Celery Sandbox')
+app = FastAPI(title="FastAPI Redis Celery Sandbox")
 
 
-@app.on_event('startup')
+@app.on_event("startup")
 async def startup_event():
-    log.debug('Server started: http://0.0.0.0:8000')
+    log.debug("Server started: http://0.0.0.0:8000")
     keys = cache.Keys()
     await cache.initialize_redis(keys)
 
@@ -33,12 +34,14 @@ async def healthcheck():
     """
     Healthcheck
     """
-    log.debug('Healthcheck called')
+    log.debug("Healthcheck called")
     return {"running": True}
 
 
-@app.post('/refresh')
-async def refresh(background_tasks: BackgroundTasks, keys: cache.Keys = Depends(cache.make_keys)):
+@app.post("/refresh")
+async def refresh(
+    background_tasks: BackgroundTasks, keys: cache.Keys = Depends(cache.make_keys)
+):
     async with httpx.AsyncClient() as client:
         data = await client.get(cache.SENTIMENT_API_URL)
 
@@ -49,8 +52,10 @@ async def refresh(background_tasks: BackgroundTasks, keys: cache.Keys = Depends(
     return data
 
 
-@app.get('/is-bitcoin-lit')
-async def bitcoin(background_tasks: BackgroundTasks, keys: cache.Keys = Depends(cache.make_keys)):
+@app.get("/is-bitcoin-lit")
+async def bitcoin(
+    background_tasks: BackgroundTasks, keys: cache.Keys = Depends(cache.make_keys)
+):
     data = cache.get_cache(keys)
 
     if not data:
@@ -90,8 +95,7 @@ def get_user(user_id: int):
     if user:
         return user
     else:
-        raise HTTPException(404, crud_error_message(
-            f"No user found for id: {user_id}"))
+        raise HTTPException(404, crud_error_message(f"No user found for id: {user_id}"))
 
 
 @app.post("/weathers/{city}/{delay}", status_code=201)

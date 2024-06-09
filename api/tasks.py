@@ -30,7 +30,7 @@ def task_add_user(count: int, delay: int):
             last_name=item["name"]["last"],
             mail=item["email"],
             age=item["dob"]["age"],
-            address=f"{country}, {city}, {postcode}, {street_name} {street_number}"
+            address=f"{country}, {city}, {postcode}, {street_name} {street_number}",
         )
 
         if crud_add_user(user):
