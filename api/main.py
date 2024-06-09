@@ -4,6 +4,7 @@ from database import engine
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from models import Base
 from tasks import task_add_user, task_add_weather
+from enum import Enum
 import httpx
 import logging
 import cache
@@ -12,6 +13,15 @@ import cache
 # from dotenv import load_dotenv
 # load_dotenv()
 # CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
+
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+class ModelName(str, Enum):
+    alexnet = "alexnet"
+    resnet = "resnet"
+    lenet = "lenet"
+
 
 logging.basicConfig(
     format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S", level="DEBUG"
@@ -36,6 +46,24 @@ async def healthcheck():
     """
     log.debug("Healthcheck called")
     return {"running": True}
+
+
+@app.get("/files/{file_path:path}")
+async def read_file(file_path: str):
+    return {"file_path": file_path}
+
+
+# query params: http://127.0.0.1:8000/items/?skip=0&limit=10
+@app.get("/items/")
+async def read_items(skip: int = 0, limit: int = 10):
+    return fake_items_db[skip : skip + limit]
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: str | None = None):
+    if q:
+        return {"item_id": item_id, "q": q}
+    return {"item_id": item_id}
 
 
 @app.post("/refresh")
